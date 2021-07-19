@@ -1,0 +1,91 @@
+---
+title: "GDC Data"
+output: 
+  html_notebook:
+    code_folding: hide
+---
+
+```{r}
+library(data.table)
+library(reshape2)
+library(tidyverse)
+```
+
+
+## analyte_type and analyte_type_id in GDC analytes and aliquots
+
+GDC Data are downloaded from the GDC data portal on 3/1/2021. 
+
+```{r}
+# Load the biospecimen data
+analytes = read.csv("../data/gdc/biospecimen.cases_selection.2021-03-01/analyte.tsv", sep="\t")
+aliquots = read.csv("../data/gdc/biospecimen.cases_selection.2021-03-01/aliquot.tsv", sep="\t")
+```
+
+
+## Analytes
+
+#### analyte_type
+
+```{r}
+data.frame(table(analytes$analyte_type))
+```
+
+#### analyte_type_id
+
+```{r}
+data.frame(table(analytes$analyte_type_id))
+```
+
+
+#### Correlation between the two set of values
+
+```{r}
+a_a_tab = data.frame(table(analytes[!(analytes$analyte_type %like% "'" & analytes$analyte_type_id %like% "'"), c('analyte_type_id', 'analyte_type')]))
+aa_freq = cbind(ID=rownames(a_a_tab), a_a_tab)
+filter(aa_freq, Freq > 0)[, c(2, 3, 4)]
+```
+
+
+## Aliquots
+
+#### analyte_type
+
+```{r}
+data.frame(table(aliquots$analyte_type))
+```
+
+#### analyte_type_id
+
+```{r}
+data.frame(table(aliquots$analyte_type_id))
+```
+
+#### Correlation between analyte_type and analyte_type_id values in aliquots
+
+```{r}
+a_a_tab = data.frame(table(aliquots[!(aliquots$analyte_type %like% "'" & aliquots$analyte_type_id %like% "'"), c('analyte_type_id', 'analyte_type')]))
+aa_freq = cbind(ID=rownames(a_a_tab), a_a_tab)
+filter(aa_freq, Freq > 0)[, c(2, 3, 4)]
+```
+
+
+## Diagnosis
+
+```{r}
+# Load the biospecimen data
+clinical = read.csv("../data/gdc/clinical.cases_selection.2021-03-01/clinical.tsv", sep="\t")
+```
+
+#### Correlation between primary_diagnosis and morphology in aliquots
+
+```{r}
+clinical.pm_tab = data.frame(table(clinical[!(clinical$primary_diagnosis %like% "'" & clinical$morphology %like% "'"), c('primary_diagnosis', 'morphology')]))
+clinical.pm_freq = filter(cbind(ID=rownames(a_a_tab), clinical.pm_tab), Freq > 0)[, c(2,3,4)]
+clinical.pm_freq
+```
+
+The only morphology code that are grouped with several diagnosis code (ICD-O Morphology Labels) is 9800/3
+```{r}
+filter(clinical.pm_freq, morphology=='9800/3')
+```

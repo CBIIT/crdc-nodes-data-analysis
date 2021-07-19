@@ -1,0 +1,45 @@
+---
+title: "PDC Data"
+output: 
+  html_notebook:
+    code_folding: hide
+---
+
+```{r}
+library(data.table)
+library(reshape2)
+library(tidyverse)
+```
+
+
+## analyte_type and analyte_type_id in GDC analytes and aliquots
+
+GDC Data are downloaded from the GDC data portal on 3/1/2021. 
+
+```{r}
+# Load the biospecimen data
+pdc.biospecimen = read.csv("../data/pdc/PDC_biospecimen_manifest_03102021_101032.csv")
+pdc.studies = read.csv("../data/pdc/PDC_study_manifest_03102021_101016.csv")
+```
+
+
+#### Analyte_type
+
+There's no analyte type in the downloaded data. The analyte type on the web portal appears to be "protein" in most cases manually checked. 
+
+For example, see Aliquot.Submitter.ID: CPT0073530001 in case [C3L-01257](https://proteomic.datacommons.cancer.gov/pdc/case/6e7501ca-118a-11e9-afb9-0a9c39d33490)
+
+```{r}
+unique(pdc.biospecimen[, 'Analyte.Type'])
+```
+
+
+## Disease Type
+
+Each data can have more than one disease types, separated by ";". 
+
+No ICD-O based terms are used. All terms appear to be the deprecated GDC terms. 
+
+```{r}
+data.frame(table(pdc.studies$Disease.Type))
+```
