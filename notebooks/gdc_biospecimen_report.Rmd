@@ -1,0 +1,586 @@
+---
+title: "GDC Biospecimen Report"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(data.table)
+library(reshape2)
+library(tidyverse)
+library(knitr)
+library(naniar)
+library(ggpubr)
+library(RColorBrewer)
+library(pander)
+
+"%notin%" <- Negate("%in%")
+```
+
+
+GDC Data are downloaded from the GDC data portal on 7/25/2021. 
+
+```{r, include = FALSE}
+# Load the biospecimen data
+analytes = read.csv("../data/gdc/biospecimen.cases_selection.2021-07-25/analyte.tsv", sep="\t")
+aliquots = read.csv("../data/gdc/biospecimen.cases_selection.2021-07-25/aliquot.tsv", sep="\t")
+
+```
+
+
+## Analytes
+
+#### **analyte_type**
+
+```{r, echo = FALSE, fig.width = 11}
+
+
+analyte_t <- data.frame(table(analytes$analyte_type)) %>%
+  na_if("'--") 
+
+analyte_t %>%
+  filter(Var1 != "NA") %>%
+  ggplot(aes(x = Var1,y = Freq, fill = Var1)) + 
+    geom_bar(stat = 'identity', show.legend = FALSE)+
+    coord_flip() + 
+    geom_text(stat = 'identity', aes(label = Freq)) +
+    labs(x = "Analyte Type", y = "Count", title = "Analyte Type Frequency") + 
+    scale_fill_brewer(palette = 'Set3')
+
+```
+
+There were `r analyte_t$Freq[1]` NA entries.
+
+##### Unused Values:
+* cfDNA
+* EBV Immortalized Normal
+* FFPE DNA
+* FFPE RNA
+* Nuclei RNA
+* Repli-G Pooled (Qiagen) DNA
+
+12 Total Values, 6 Unused
+
+#### **analyte_type_id**
+
+```{r, echo = FALSE, fig.width = 11}
+analyte_id <- data.frame(table(analytes$analyte_type_id)) %>%
+  na_if("'--") 
+  
+analyte_id %>%
+  filter(Var1 != "NA") %>%
+  ggplot(aes(x = Var1,y = Freq, fill = Var1)) + 
+    geom_bar(stat = 'identity', show.legend = FALSE)+
+    coord_flip() + 
+    geom_text(stat = 'identity', aes(label = Freq)) +
+    labs(x = "Analyte Type ID", y = "Count", title = "Analyte Type ID Frequency") + 
+    scale_fill_brewer(palette = 'Set3')
+
+```
+
+There were `r analyte_t$Freq[1]` NA entries.
+
+##### Unused Values:
+
+10 Total Values, 3 Unused
+
+* E
+* S
+* Y
+
+
+
+
+#### **Correlation between the two set of values**
+
+```{r, echo = FALSE}
+a_a_tab = data.frame(table(analytes[!(analytes$analyte_type %like% "'" & analytes$analyte_type_id %like% "'"), c('analyte_type_id', 'analyte_type')]))
+aa_freq = cbind(ID=rownames(a_a_tab), a_a_tab)
+corr_tab <- filter(aa_freq, Freq > 0)[, c(2, 3, 4)] %>%
+  select(`Analyte Type ID` = analyte_type_id, `Analyte Type` = analyte_type, `Frequency` = Freq)
+
+kable(corr_tab, format = "pipe",
+        caption = "Table 1.3: Correlation Between Analyte Type and Analyte Type ID")
+```
+
+##### **Field values without 1:1 Correspondence:**
+```{r, echo = FALSE}
+n_occur_a <- data.frame(table(corr_tab$`Analyte Type`))
+n_occur_b <- data.frame(table(corr_tab$`Analyte Type ID`))
+corr_tab %>%
+  filter((`Analyte Type` %in% n_occur_a$Var1[n_occur_a$Freq > 1]) | (`Analyte Type ID` %in% n_occur_b$Var1[n_occur_b$Freq > 1]) | (`Analyte Type ID`== "'--") | (`Analyte Type` == "'--" )) %>%
+  kable(format = "pipe",
+        caption = "Table 1.4: Field Values between Analyte Type and Type ID without 1:1 correspondence")
+
+```
+
+#### **normal_tumor_genotype_snp_match**
+```{r, echo = FALSE}
+data.frame(table(analytes$normal_tumor_genotype_snp_match)) %>%
+  na_if("'--") %>%
+  select(`Match` = Var1, `Frequency`=Freq) %>%
+  kable(format = "pipe",
+        caption = "Table 1.5: Normal Tumor Genotype Match Value Distribution")
+```
+
+## Aliquots
+
+#### **analyte_type**
+
+```{r, echo = FALSE, fig.width = 11}
+analyte_t <- data.frame(table(aliquots$analyte_type)) %>%
+  na_if("'--") 
+
+
+analyte_t %>%
+  filter(Var1!="NA") %>%
+  ggplot(aes(x = Var1,y = Freq, fill = Var1), na.rm=TRUE) + 
+    geom_bar(stat = 'identity', show.legend = FALSE)+
+    coord_flip() + 
+    geom_text(stat = 'identity', aes(label = Freq)) +
+    labs(x = "Analyte Type", y = "Count", title = "Analyte Type Frequency") + 
+    scale_fill_brewer(palette = 'Set3')
+```
+
+There were `r analyte_t$Freq[1]` NA entries.
+
+##### Unused Values:
+* EBV Immortalized Normal
+* GenomePlex (Rubicon) Amplified DNA
+* Repli_G (Qiagen) DNA
+* Repli-G Pooled (Qiagen) DNA
+* Repli-G X (Qiagen) DNA
+* Total RNA
+
+12 total field values, 6 unused.
+
+#### **analyte_type_id**
+
+```{r, echo = FALSE}
+analyte_id <- data.frame(table(aliquots$analyte_type_id)) %>%
+  na_if("'--") %>%
+  kable(format = "pipe",
+        caption = "Table 2.1: Aliquots Analyte Type ID value distribution")
+
+```
+
+There were `r analyte_t$Freq[1]` NA entries.
+
+##### Unused Values:
+* E
+* G
+* H
+* S
+* T
+* W
+* X
+* Y
+ 
+ 10 total field values, 8 unused.
+
+
+#### **Correlation between analyte_type and analyte_type_id values in aliquots**
+
+```{r, echo = FALSE}
+a_a_tab = data.frame(table(aliquots[!(aliquots$analyte_type %like% "'" & aliquots$analyte_type_id %like% "'"), c('analyte_type_id', 'analyte_type')]))
+aa_freq = cbind(ID=rownames(a_a_tab), a_a_tab)
+corr_tab <- filter(aa_freq, Freq > 0)[, c(2, 3, 4)] %>%
+  select(`Analyte Type ID` = analyte_type_id, `Analyte Type` = analyte_type, `Frequency` = Freq)
+
+
+kable(corr_tab, format = "pipe",
+        caption = "Table 2.2a: Correlation between Aliquot Analyte Type and Analyte Type ID")
+```
+
+##### **Field values without 1:1 Correspondence:**
+```{r, echo = FALSE}
+
+n_occur_a <- data.frame(table(corr_tab$`Analyte Type`))
+n_occur_b <- data.frame(table(corr_tab$`Analyte Type ID`))
+corr_tab %>%
+  filter((`Analyte Type` %in% n_occur_a$Var1[n_occur_a$Freq > 1]) | (`Analyte Type ID` %in% n_occur_b$Var1[n_occur_b$Freq > 1]) | (`Analyte Type ID`== "'--") | (`Analyte Type` == "'--" )) %>%
+  kable(format = "pipe",
+        caption = "Table 2.2b: Field Values between Aliquot Analyte Type and Type ID without 1:1 correspondence")
+
+```
+
+
+## Sample
+```{r, include = FALSE}
+# Load Sample Data
+sample = read.csv("../data/gdc/biospecimen.cases_selection.2021-07-25/sample.tsv", sep="\t")
+```
+
+#### **sample_type**
+```{r, echo = FALSE, fig.width = 11}
+s_type <- data.frame(table(sample$sample_type)) %>%
+  na_if("'--")
+
+
+s_type %>%
+  filter(Var1 != "NA") %>%
+  ggplot(aes(x = Var1,y = Freq, fill = Var1), na.rm=TRUE) + 
+    geom_bar(stat = 'identity', show.legend = FALSE)+
+    coord_flip() + 
+    geom_text(stat = 'identity', aes(label = Freq)) +
+    labs(x = "Sample Type", y = "Count", title = "Sample Type Frequency") 
+
+enum <- c("Additional - New Primary", "Additional Metastatic", "Benign Neoplasms", "Blood Derived Cancer - Bone Marrow", "Blood Derived Cancer - Bone Marrow, Post-treatment", "Blood Derived Cancer - Peripheral Blood", "Blood Derived Cancer - Peripheral Blood, Post-treatment", "Blood Derived Liquid Biopsy", "Blood Derived Normal", "Bone Marrow Normal", "Buccal Cell Normal", "Cell Line Derived Xenograft Tissue", "Cell Lines", "Control Analyte", "DNA", "EBV Immortalized Normal", "Expanded Next Generation Cancer Model", "FFPE Recurrent", "FFPE Scrolls", "Fibroblasts from Bone Marrow Normal", "GenomePlex (Rubicon) Amplified DNA", "Granulocytes", "Human Tumor Original Cells", "In Situ Neoplasms", "Lymphoid Normal", "Metastatic", "Mixed Adherent Suspension", "Mononuclear Cells from Bone Marrow Normal", "Neoplasms of Uncertain and Unknown Behavior", "Next Generation Cancer Model", "Next Generation Cancer Model Expanded Under Non-conforming Conditions", "Not Allowed To Collect", "Pleural Effusion", "Post neo-adjuvant therapy", "Primary Blood Derived Cancer - Bone Marrow", "Primary Blood Derived Cancer - Peripheral Blood", "Primary Tumor", "Primary Xenograft Tissue", "Recurrent Blood Derived Cancer - Bone Marrow", "Recurrent Blood Derived Cancer - Peripheral Blood
+Recurrent Tumor", "Repli-G (Qiagen) DNA", "Repli-G X (Qiagen) DNA", "RNA", "Saliva", "Slides", "Solid Tissue Normal", "Total RNA", "Tumor", "Tumor Adjacent Normal - Post Neo-adjuvant Therapy", "Xenograft Tissue", "Unknown", "Not Reported")
+  
+```
+
+There were `r s_type$Freq[1]` NA entries.
+
+##### Unused Values:
+
+`r length(enum)` total field values, `r length(enum) - length(s_type$Var1 %in% enum)` unused values.
+
+```{r, echo = FALSE}
+pander(enum[enum %notin% s_type$Var1])
+
+```
+
+
+#### **sample_type_id**
+```{r, echo = FALSE, fig.width = 11}
+s_type <- data.frame(table(sample$sample_type_id))  %>%
+  na_if("'--")
+
+s_type %>%
+  filter(Var1 != "NA") %>%
+  ggplot(aes(x = Var1,y = Freq, fill = Var1), na.rm=TRUE) + 
+    geom_bar(stat = 'identity', show.legend = FALSE)+
+    coord_flip() + 
+    geom_text(stat = 'identity', aes(label = Freq)) +
+    labs(x = "Sample Type ID", y = "Count", title = "Sample Type ID Frequency") 
+
+enum <- c("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "20", "30", "31", "32", "40", "41", "42", "50", "60", "61", "85", "86", "87", "99")
+```
+
+There were `r s_type$Freq[1]` NA entries.
+
+##### Unused Values:
+
+`r length(enum)` total field values, `r length(enum) - length(s_type$Var1 %in% enum)` unused values.
+
+```{r, echo = FALSE}
+pander(enum[enum %notin% s_type$Var1])
+
+```
+
+
+#### **Correlation between sample_type and sample_type_id**
+```{r, echo = FALSE}
+a_a_tab = data.frame(table(sample[!(sample$sample_type %like% "'" & sample$sample_type_id %like% "'"), c('sample_type_id', 'sample_type')]))
+aa_freq = cbind(ID=rownames(a_a_tab), a_a_tab)
+corr_tab <- filter(aa_freq, Freq > 0)[, c(2, 3, 4)] %>%
+  select(`Sample Type ID` = sample_type_id, `Sample Type` = sample_type, `Frequency` = Freq)
+
+kable(corr_tab, format = "pipe",
+        caption = "Table 3.1a: Correlation between Sample Type and Sample Type ID")
+
+```
+
+##### **Field values without 1:1 Correspondence:**
+```{r, echo = FALSE}
+
+n_occur_a <- data.frame(table(corr_tab$`Sample Type`))
+n_occur_b <- data.frame(table(corr_tab$`Sample Type ID`))
+corr_tab %>%
+  filter((`Sample Type` %in% n_occur_a$Var1[n_occur_a$Freq > 1]) | (`Sample Type ID` %in% n_occur_b$Var1[n_occur_b$Freq > 1]) | (`Sample Type ID`== "'--") | (`Sample Type` == "'--" )) %>%
+  kable(format = "pipe",
+        caption = "Table 3.1b: Sample Type and Type ID values without 1:1 correspondence")
+
+```
+
+#### **tissue_type**
+```{r, echo = FALSE, fig.width = 11}
+s_type <- data.frame(table(sample$tissue_type)) %>%
+  na_if("'--")
+
+s_type %>%
+  filter(Var1 != "NA") %>%
+  ggplot(aes(x = Var1,y = Freq, fill = Var1)) + 
+    geom_bar(stat = "identity", show.legend = FALSE)+
+    coord_flip() + 
+    geom_text(stat = "identity", aes(label = Freq)) +
+    labs(x = "Tissue Type", y = "Count", title = "Tissue Type Frequency") +
+    scale_fill_brewer(palette = "Set3")
+```
+
+There were `r s_type$Freq[1]` NA entries.
+
+##### Unused Values:
+
+6 Total Values, 3 Unused.
+
+* Abnormal
+* Peritumoral
+* Unknown
+
+#### **biospecimen_anatomic_site**
+```{r, echo = FALSE, fig.width = 11, fig.height = 8}
+s_type <- data.frame(table(sample$biospecimen_anatomic_site)) %>%
+  na_if("'--")
+
+s_type %>%
+  filter(Var1 != "NA") %>%
+  ggplot(aes(x = Var1,y = Freq, fill = Var1)) + 
+    geom_bar(stat = "identity", show.legend = FALSE)+
+    coord_flip() + 
+    geom_text(stat = "identity", aes(label = Freq), hjust = -0.25) +
+    labs(x = "Biospecimen Anatomic Site", y = "Count", title = "Biospecimen Anatomic Site Value Frequency")
+
+enum <- c("Abdomen", "Abdominal Wall", "Acetabulum", "Adenoid", "Adipose", "Adrenal", "Alveolar Ridge", "Amniotic Fluid", "Ampulla Of Vater", "Anal Sphincter", "Ankle", "Anorectum", "Antecubital Fossa", "Antrum", "Anus", "Aorta", "Aortic Body", "Appendix", "Aqueous Fluid", "Arm", "Artery", "Ascending Colon", "Ascending Colon Hepatic Flexure", "Auditory Canal", "Autonomic Nervous System", "Axilla", "Back", "Bile Duct", "Bladder", "Blood", "Blood Vessel", "Bone", "Bone Marrow", "Bowel", "Brain", "Brain Stem", "Breast", "Broad Ligament", "Bronchiole", "Bronchus", "Brow", "Buccal Cavity", "Buccal Mucosa", "Buttock", "Calf", "Capillary", "Cardia", "Carina", "Carotid Artery", "Carotid Body", "Cartilage", "Cecum", "Cell-Line", "Central Nervous System", "Cerebellum", "Cerebral Cortex", "Cerebrospinal Fluid", "Cerebrum", "Cervical Spine", "Cervix", "Chest", "Chest Wall", "Chin", "Clavicle", "Clitoris", "Colon", "Colon - Mucosa Only", "Common Duct", "Conjunctiva", "Connective Tissue", "Dermal", "Descending Colon", "Diaphragm", "Duodenum", "Ear", "Ear Canal", "Ear, Pinna (External)", "Effusion", "Elbow", "Endocrine Gland", "Epididymis", "Epidural Space", "Esophageal; Distal", "Esophageal; Mid", "Esophageal; Proximal", "Esophagogastric Junction", "Esophagus", "Esophagus - Mucosa Only", "Eye", "Fallopian Tube", "Femoral Artery", "Femoral Vein", "Femur", "Fibroblasts", "Fibula", "Finger", "Floor Of Mouth", "Fluid", "Foot", "Forearm", "Forehead", "Foreskin", "Frontal Cortex", "Frontal Lobe", "Fundus Of Stomach", "Gallbladder", "Ganglia", "Gastroesophageal Junction", "Gastrointestinal Tract", "Glottis", "Groin", "Gum", "Hand", "Hard Palate", "Head - Face Or Neck, Nos", "Head & Neck", "Heart", "Hepatic", "Hepatic Duct", "Hepatic Flexure", "Hepatic Vein", "Hip", "Hippocampus", "Humerus", "Hypopharynx", "Ileum", "Ilium", "Index Finger", "Ischium", "Islet Cells", "Jaw", "Jejunum", "Joint", "Kidney", "Knee", "Lacrimal Gland", "Large Bowel", "Laryngopharynx", "Larynx", "Leg", "Leptomeninges", "Ligament", "Lip", "Liver", "Lumbar Spine", "Lung", "Lymph Node", "Lymph Node(s) Axilla", "Lymph Node(s) Cervical", "Lymph Node(s) Distant", "Lymph Node(s) Epitrochlear", "Lymph Node(s) Femoral", "Lymph Node(s) Hilar", "Lymph Node(s) Iliac-Common", "Lymph Node(s) Iliac-External", "Lymph Node(s) Inguinal", "Lymph Node(s) Internal Mammary", "Lymph Node(s) Mammary", "Lymph Node(s) Mesenteric", "Lymph Node(s) Occipital", "Lymph Node(s) Paraaortic", "Lymph Node(s) Parotid", "Lymph Node(s) Pelvic", "Lymph Node(s) Popliteal", "Lymph Node(s) Regional", "Lymph Node(s) Retroperitoneal", "Lymph Node(s) Scalene", "Lymph Node(s) Splenic", "Lymph Node(s) Subclavicular", "Lymph Node(s) Submandibular", "Lymph Node(s) Supraclavicular", "Lymph Nodes(s) Mediastinal", "Mandible", "Maxilla", "Mediastinal Soft Tissue", "Mediastinum", "Mesentery", "Mesothelium", "Middle Finger", "Mitochondria", "Muscle", "Nails", "Nasal Cavity", "Nasal Soft Tissue", "Nasopharynx", "Neck", "Nerve", "Nerve(s) Cranial", "Not Allowed To Collect", "Occipital Cortex", "Ocular Orbits", "Omentum", "Oral Cavity", "Oral Cavity - Mucosa Only", "Oropharynx", "Other", "Ovary", "Palate", "Pancreas", "Paranasal Sinuses", "Paraspinal Ganglion", "Parathyroid", "Parotid Gland", "Patella", "Pelvis", "Penis", "Pericardium", "Periorbital Soft Tissue", "Peritoneal Cavity", "Peritoneum", "Pharynx", "Pineal", "Pineal Gland", "Pituitary Gland", "Placenta", "Pleura", "Popliteal Fossa", "Prostate", "Pylorus", "Rectosigmoid Junction", "Rectum", "Retina", "Retro-Orbital Region", "Retroperitoneum", "Rib", "Ring Finger", "Round Ligament", "Sacrum", "Salivary Gland", "Scalp", "Scapula", "Sciatic Nerve", "Scrotum", "Seminal Vesicle", "Shoulder", "Sigmoid Colon", "Sinus", "Sinus(es), Maxillary", "Skeletal Muscle", "Skin", "Skull", "Small Bowel", "Small Bowel - Mucosa Only", "Small Finger", "Soft Tissue", "Spinal Column", "Spinal Cord", "Spleen", "Splenic Flexure", "Sternum", "Stomach", "Stomach - Mucosa Only", "Subcutaneous Tissue", "Subglottis", "Sublingual Gland", "Submandibular Gland", "Supraglottis", "Synovium", "Temporal Cortex", "Tendon", "Testis", "Thigh", "Thoracic Spine", "Thorax", "Throat", "Thumb", "Thymus", "Thyroid", "Tibia", "Tongue", "Tonsil", "Tonsil (Pharyngeal)", "Trachea / Major Bronchi", "Transverse Colon", "Trunk", "Umbilical Cord", "Ureter", "Urethra", "Urinary Tract", "Uterus", "Uvula", "Vagina", "Vas Deferens", "Vein", "Venous", "Vertebra", "Vulva", "White Blood Cells", "Wrist", "Unknown", "Not Reported")
+```
+
+There were `r s_type$Freq[1]` NA entries.
+
+##### Unused Values:
+
+`r length(enum)` total field values, `r length(enum) - length(s_type$Var1 %in% enum)` unused values listed below.
+
+`r pander(enum[enum %notin% s_type$Var1])`
+
+
+#### **biospecimen_laterality**
+```{r, echo = FALSE}
+s_type <- data.frame(table(sample$biospecimen_laterality)) %>%
+  na_if("'--")
+s_type %>%
+  select(`Biospecimen Laterality` = Var1, `Frequency` = Freq) %>%
+  kable(format = "pipe",
+        caption = "Table 3.3: Biospecimen Laterality Value Distribution")
+
+```
+
+##### Unused Values:
+
+5 total values, all unused.
+
+#### **composition**
+```{r, echo = FALSE, fig.width = 11, fig.heigh = 6}
+s_type <- data.frame(table(sample$composition)) %>%
+  na_if("'--")
+
+s_type %>%
+  filter(Var1 != "NA") %>%
+  ggplot(aes(x = Var1,y = Freq, fill = Var1)) + 
+    geom_bar(stat = "identity", show.legend = FALSE)+
+    coord_flip() + 
+    geom_text(stat = "identity", aes(label = Freq), hjust = -0.15) +
+    labs(x = "Composition", y = "Count", title = "Composition Value Frequency") +
+    scale_fill_brewer(palette = "Set3")
+
+enum <- c("2D Classical Conditionally Reprogrammed Cells", "2D Modified Conditionally Reprogrammed Cells", 
+"3D Air-Liquid Interface Organoid", "3D Neurosphere", "3D Organoid", "Adherent Cell Line", "Bone Marrow Components", "Bone Marrow Components NOS", "Buccal Cells", "Buffy Coat", "Cell", "Control Analyte", "Derived Cell Line", "EBV Immortalized", "Fibroblasts from Bone Marrow Normal", "Granulocytes", "Human Original Cells", "Liquid Suspension Cell Line", "Lymphocytes", "Mixed Adherent Suspension", "Mononuclear Cells from Bone Marrow Normal", "Peripheral Blood Components NOS", "Peripheral Whole Blood", "Plasma", "Pleural Effusion", "Saliva", "Serum", "Solid Tissue", "Sorted Cells", "Sputum", "Whole Bone Marrow", "Unknown","Not Reported")
+```
+
+There were `r s_type$Freq[1]` NA entries.
+
+##### Unused Values:
+
+`r length(enum)` total field values, `r length(enum) - length(s_type$Var1 %in% enum)` unused values.
+
+
+`r pander(enum[enum %notin% s_type$Var1])`
+
+
+#### **diagnosis_pathologically_confirmed**
+```{r, echo = FALSE}
+s_type <- data.frame(table(sample$diagnosis_pathologically_confirmed)) %>%
+  na_if("'--")
+s_type %>%
+  select(`Diagnosis Pathological Confirmation` = Var1, `Frequency` = Freq) %>%
+  kable(format = "pipe",
+        caption = "Table 3.4: Diagnosis Confirmation Distribution")
+```
+
+##### Unused Values:
+
+4 total values, all unused.
+
+#### **distance_normal_to_tumor**
+```{r, echo = FALSE}
+s_type <- data.frame(table(sample$distance_normal_to_tumor)) %>%
+  na_if("'--")
+s_type %>%
+  select(`Distance From Tumor to Normal Tissue` = Var1, `Frequency` = Freq) %>%
+  kable(format = "pipe",
+        caption = "Table 3.5: distance_normal_to_tumor Distribution")
+```
+
+##### Unused Values:
+
+4 total values, all unused.
+
+#### **method_of_sample_procurement**
+```{r, echo = FALSE}
+s_type <- data.frame(table(sample$method_of_sample_procurement)) %>%
+  na_if("'--")
+s_type %>%
+  select(`Sample Procurement Method` = Var1, `Frequency` = Freq) %>%
+  kable(format = "pipe",
+        caption = "Table 3.6: Method of Sample Procurement Value Distribution")
+```
+
+##### Unused Values:
+
+102 total values, all unused.
+
+#### **preservation_method**
+```{r, echo = FALSE, fig.width = 10, fig.size = 3}
+s_type <- data.frame(table(sample$preservation_method)) %>%
+  na_if("'--")
+
+s_type %>%
+  filter(Var1 != "NA") %>%
+  ggplot(aes(x = Var1,y = Freq, fill = Var1)) + 
+    geom_bar(stat = "identity", show.legend = FALSE)+
+    coord_flip() + 
+    geom_text(stat = "identity", aes(label = Freq), hjust = -0.15) +
+    labs(x = "Preservation Method", y = "Count", title = "Preservation Method Value Frequency") +
+    scale_fill_brewer(palette = "Set3")
+
+```
+
+There were `r s_type$Freq[1]` NA entries.
+
+##### Unused Values:
+
+8 total values, 5 unused values listed below.
+
+* Cryopreserved
+* Fresh
+* OCT
+* Unknown
+* Not reported
+
+#### **tissue_collection_type**
+```{r, echo = FALSE}
+s_type <- data.frame(table(sample$tissue_collection_type)) %>%
+  na_if("'--")
+s_type %>%
+  select(`Tissue Collection Type` = Var1, `Frequency` = Freq) %>%
+  kable(format = "pipe",
+        caption = "Table 3.7: Tissue Collection Type Value Distribution")
+```
+
+##### Unused Values:
+
+2 total values, both unused.
+
+#### **tumor_code**
+```{r, echo = FALSE, fig.width = 10, fig.height = 4}
+s_type <- data.frame(table(sample$tumor_code)) %>%
+  na_if("'--")
+
+s_type %>%
+  filter(Var1 != "NA") %>%
+  ggplot(aes(x = Var1,y = Freq, fill = Var1)) + 
+    geom_bar(stat = "identity", show.legend = FALSE)+
+    coord_flip() + 
+    geom_text(stat = "identity", aes(label = Freq), hjust = -0.15) +
+    labs(x = "Tumor Code", y = "Count", title = "Tumor Code Value Frequency") +
+    scale_fill_brewer(palette = "Set3")
+
+enum <- c("Acute Leukemia of Ambiguous Lineage (ALAL)", "Acute lymphoblastic leukemia (ALL)", "Acute myeloid leukemia (AML)",  "Anal Cancer (all types)", "Cervical Cancer (all types)", "Clear cell sarcoma of the kidney (CCSK)", "CNS, ependymoma", "CNS, glioblastoma (GBM)", "CNS, low grade glioma (LGG)", "CNS, medulloblastoma", "CNS, other", "CNS, rhabdoid tumor", "Diffuse Large B-Cell Lymphoma (DLBCL)", "Ewing sarcoma", "Induction Failure AML (AML-IF)", "Lung Cancer (all types)", "Neuroblastoma (NBL)", "NHL, anaplastic large cell lymphoma", "NHL, Burkitt lymphoma (BL)", "Non cancerous tissue", "Osteosarcoma (OS)", "Rhabdoid tumor (kidney) (RT)", "Rhabdomyosarcoma", "Soft tissue sarcoma, non-rhabdomyosarcoma", "Wilms tumor (WT)")
+```
+
+There were `r s_type$Freq[1]` NA entries.
+
+##### Unused Values:
+
+`r length(enum)` total field values, `r length(enum) - length(s_type$Var1 %in% enum)` unused values.
+
+`r pander(enum[enum %notin% s_type$Var1])`
+
+#### **tumor_code_id**
+```{r, echo = FALSE, fig.width = 9, fig.height = 3}
+s_type <- data.frame(table(sample$tumor_code_id)) %>%
+  na_if("'--")
+s_type %>%
+  select(`Tumor Code ID` = Var1, `Frequency` = Freq) %>%
+  kable(format = "pipe",
+        caption = "Table 3.8: Tumor Code ID Value Distribution")
+
+s_type %>%
+  filter(Var1 != "NA") %>%
+  ggplot(aes(x = Var1,y = Freq, fill = Var1)) + 
+    geom_bar(stat = "identity", show.legend = FALSE)+
+    coord_flip() + 
+    geom_text(stat = "identity", aes(label = Freq), hjust = -0.15) +
+    labs(x = "Tumor Code ID", y = "Count", title = "Tumor Code ID Value Frequency") +
+    scale_fill_brewer(palette = "Set3")
+
+enum <- c("00", "01", "02", "03", "04", "10", "15", "20", "21", "30", "40", "41", "50", "51", "52", "60", "61", "62", "63", "64", "65", "70", "71", "80", "81")
+```
+
+There were `r s_type$Freq[1]` NA entries.
+
+##### Unused Values:
+
+`r length(enum)` total field values, `r length(enum) - length(s_type$Var1 %in% enum)` unused values.
+
+`r pander(enum[enum %notin% s_type$Var1])`
+
+#### **correlation between tumor_code and tumor_code_id**
+```{r, echo = FALSE}
+a_a_tab = data.frame(table(sample[!(sample$tumor_code %like% "'" & sample$tumor_code_id %like% "'"), c('tumor_code_id', 'tumor_code')]))
+aa_freq = cbind(ID=rownames(a_a_tab), a_a_tab)
+corr_tab <- filter(aa_freq, Freq > 0)[, c(2, 3, 4)] %>%
+  select(`Tumor Code ID` = tumor_code_id, `Tumor Code` = tumor_code, `Frequency` = Freq)
+
+kable(corr_tab, format = "pipe",
+        caption = "Table 3.9a: Correlation between Tumor Code and Tumor Code ID")
+
+
+```
+
+##### **Field values without 1:1 Correspondence:**
+```{r, echo = FALSE}
+
+n_occur_a <- data.frame(table(corr_tab$`Tumor Code`))
+n_occur_b <- data.frame(table(corr_tab$`Tumor Code ID`))
+corr_tab %>%
+  filter((`Tumor Code` %in% n_occur_a$Var1[n_occur_a$Freq > 1]) | (`Tumor Code ID` %in% n_occur_b$Var1[n_occur_b$Freq > 1]) | (`Tumor Code ID`== "'--") | (`Tumor Code` == "'--" )) %>%
+  kable(format = "pipe",
+        caption = "Table 3.9b: Tumor Code and Code ID values without 1:1 correspondence")
+
+```
+
+#### **tumor_descriptor**
+```{r, echo = FALSE, fig.width = 11, fig.height = 4}
+s_type <- data.frame(table(sample$tumor_descriptor)) %>%
+  na_if("'--")
+
+s_type %>%
+  filter(Var1 != "NA") %>%
+  ggplot(aes(x = Var1,y = Freq, fill = Var1)) + 
+    geom_bar(stat = "identity", show.legend = FALSE)+
+    coord_flip() + 
+    geom_text(stat = "identity", aes(label = Freq), hjust = -0.15) +
+    labs(x = "Tumor Descriptor", y = "Count", title = "Tumor Descriptor ID Value Frequency") +
+    scale_fill_brewer(palette = "Set3")
+```
+
+There were `r s_type$Freq[1]` NA entries.
+
+##### Unused Values:
+
+9 total values, 3 unused listed below:
+
+* NOS
+* Xenograft
+* Unknown
+
+
+
+
+
